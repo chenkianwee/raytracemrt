@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raytracemrt"
+version = "0.0.2"
+authors = [
+  { name="Kian Wee CHEN", email="chenkianwee@gmail.com" },
+]
+description = 'Python library for calculating MRT Map from Chaosense Sensor'
+readme = "README.md"
+requires-python = "==3.11"
+classifiers = ["License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+               "Programming Language :: Python :: 3.11",
+               "Operating System :: OS Independent"]
+dependencies = ['geomie3d==0.0.2']
+
+[project.urls]
+"Homepage" = "https://github.com/chenkianwee/raytracemrt/"
+"Bug Tracker" = "https://github.com/chenkianwee/raytracemrt/issues"
+
+[project.scripts]
+raytracemrt = "raytracemrt.raytracemrt:main"

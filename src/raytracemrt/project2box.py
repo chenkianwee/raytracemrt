@@ -1,11 +1,10 @@
-import sys
-import argparse
 import multiprocessing as mp
-#add the path to geomie3d
-sys.path.append('F:\\kianwee_work\\spyder_workspace\\geomie3d')
+
 import geomie3d
 import numpy as np
-import utils
+
+import raytracemrt.utils as utils
+# import utils
 #----------------------------------------------------------------
 def process_projection(projection_results, other_ls):
     hrs = projection_results[0]
@@ -39,48 +38,7 @@ def process_projection(projection_results, other_ls):
         other_ls.append({'topo_list':e_ls, 'colour': 'red'})
     return intvs, temp_ls
 
-def parse_args():
-    # create parser object
-    parser = argparse.ArgumentParser(description = "Project your Chaosense Data")
- 
-    # defining arguments for parser object
-    parser.add_argument('-s', '--scan', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The ply file to process')
-     
-    parser.add_argument('-r', '--result', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The path to save to after the processing')
-    
-    parser.add_argument('-x', '--xyz', type = float, nargs = 3,
-                        metavar = ('posX', 'posY', 'posZ'), default = None,
-                        help = "The position of the sensor")
-    
-    parser.add_argument('-d', '--space_dim', type = float, nargs = 3,
-                        metavar = ('Length(m)','Width(m)','Height(m)'), help = 'Dimensions of the scanned space')
-    
-    parser.add_argument('-v', '--viz', action = 'store_true',
-                        help = 'Open a 3D window to see the result')
-    
-    # parse the arguments from standard input
-    args = parser.parse_args()
-    
-    return args
-#----------------------------------------------------------------
-if __name__=='__main__':
-    args = parse_args()
-    therm_arr_path = args.scan[0]
-    res_path = args.result[0]
-    sensor_pos = args.xyz
-    rm_dim = args.space_dim
-    viz = args.viz
-    
-    # therm_arr_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\3dmodel\\ply\\ThermalArray_03-07-2022_17-49-26_0.PLY'
-    # res_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\3dmodel\\ply\\intersections.ply'
-    # sensor_pos = [-0.55,0.435,1.2]
-    # rm_dim = [4,5,3]
-    # viz = True
-    
+def proj2box(therm_arr_path, res_path, sensor_pos, rm_dim, viz):
     # t1_start = perf_counter()
     other_ls = []
     #read the file and get all the vert data
@@ -90,7 +48,7 @@ if __name__=='__main__':
         print('The PLY file specified is not produce from a Chaosense Sensor')
     else:
         #create the room based on the room dim
-        bx = geomie3d.create.box(rm_dim[0], rm_dim[1], rm_dim[2])
+        bx = geomie3d.create.box(rm_dim[0], rm_dim[1], rm_dim[2], centre_pt=[0,0,rm_dim[2]/2])
         # bedges = geomie3d.get.edges_frm_solid(bx)
         # other_ls.append({'topo_list':bedges, 'colour': 'red'})
         #triangulate the box
@@ -117,9 +75,9 @@ if __name__=='__main__':
         nfaces = len(nbfaces)
         ttl = ndir*nfaces
         nparallel = int(ttl/aloop)
-        print('numpber of splits:', nparallel)
+        # print('numpber of splits:', nparallel)
         if nparallel != 0:
-            print('number of splits:', nparallel)
+            # print('number of splits:', nparallel)
             rays_ls = utils.separate_rays(rays, nparallel)
         else:
             rays_ls = [rays]
@@ -163,3 +121,13 @@ if __name__=='__main__':
             intvs = geomie3d.create.vertex_list(int_xyz_ls)
             geomie3d.utility.viz_falsecolour(intvs, temp_ls, 
                                               other_topo_dlist=other_ls)
+        
+#----------------------------------------------------------------
+if __name__=='__main__':
+    therm_arr_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm.ply'
+    res_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\intersect\\intersect.ply'
+    sensor_pos = [0,0,0]
+    rm_dim = [4, 5, 3.5]
+    viz = True
+    proj2box(therm_arr_path, res_path, sensor_pos, rm_dim, viz)
+    

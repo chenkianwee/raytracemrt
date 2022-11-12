@@ -1,14 +1,12 @@
 import os
-import sys
 import json
-import argparse
-# from time import perf_counter
 from itertools import chain
-#add the path to geomie3d
-sys.path.append('F:\\kianwee_work\\spyder_workspace\\geomie3d')
+
 import geomie3d
 import numpy as np
-import utils
+
+import raytracemrt.utils as utils
+# import utils
 #----------------------------------------------------------------
 def merge_vox(voxel_dir):
     flist = os.listdir(voxel_dir)
@@ -74,33 +72,8 @@ def merge_vox(voxel_dir):
                 vx_ls[2] = vx_midpt_cmp
                 vx_ls[3] = vx_temp_cmp
     return vx_ls
-        
-def parse_args():
-    # create parser object
-    parser = argparse.ArgumentParser(description = "Merge Voxel JSON file into 1")
- 
-    # defining arguments for parser object
-    parser.add_argument('-d', '--voxel_dir', type = str, nargs = 1,
-                        metavar = 'directory', default = None,
-                        help = "The directory where all the voxel.json files are")
-    
-    parser.add_argument('-v', '--viz', action = 'store_true',
-                        help = 'Open a 3D window to see the result')
-    
-    # parse the arguments from standard input
-    args = parser.parse_args()
-    
-    return args
-#----------------------------------------------------------------
-if __name__ == '__main__':
-    # t1_start = perf_counter()
-    # args = parse_args()
-    # voxel_dir = args.voxel_dir[0]
-    # viz = args.viz
-    
-    voxel_dir = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\3dmodel\\ply\\SMART_raw_result\\voxel'
-    viz = True
-    
+
+def processed_merge_vx(voxel_dir, viz):
     vx_ls = merge_vox(voxel_dir)
     ijks = vx_ls[0]
     bbx_arrs = vx_ls[1]
@@ -119,10 +92,7 @@ if __name__ == '__main__':
         
     vx_path = os.path.join(voxel_dir, 'projected_voxels_merged.json')
     utils.write_bbox2json(bbx_ls, vx_path)
-    print(vx_path)
-    # t1_stop = perf_counter()
-    # counter = t1_stop - t1_stop
-    # print('Time taken 2 Merge (mins)', round(counter/60, 1))
+    # print(vx_path)
     if viz == True:
         viz_dlist = []
         print('Visualizing ...')
@@ -139,3 +109,9 @@ if __name__ == '__main__':
             viz_ls.extend(viz_topo)
         viz_dlist.append({'topo_list': viz_ls, 'colour': [0,0,1,0.2], 'px_mode': False, 'point_size': v_size})
         geomie3d.utility.viz(viz_dlist)
+        
+#----------------------------------------------------------------
+if __name__ == '__main__':    
+    voxel_dir = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\3dmodel\\ply\\SMART_raw_result\\voxel'
+    viz = True
+    processed_merge_vx(voxel_dir, viz)

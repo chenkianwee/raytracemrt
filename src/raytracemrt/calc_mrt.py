@@ -1,14 +1,12 @@
-import sys
 import json
-import argparse
-from time import perf_counter
 import multiprocessing as mp
 
 #add the path to geomie3d
-sys.path.append('F:\\kianwee_work\\spyder_workspace\\geomie3d')
 import geomie3d
 import numpy as np
-import utils
+
+import raytracemrt.utils as utils
+# import utils
 #----------------------------------------------------------------
 def process_intersection(intersection_results, grid_temps):
     hrs = intersection_results[0]
@@ -75,46 +73,10 @@ def gen_rays(grid_verts, ndirs):
             rays.append(ray)
     return rays
 
-def parse_args():
-    # create parser object
-    parser = argparse.ArgumentParser(description = "Calculate MRT of your Chaosense Data")
- 
-    # defining arguments for parser object
-    parser.add_argument('-e', '--voxel', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The voxel file used for environment')
-    
-    parser.add_argument('-g', '--grid', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The json file with the grid information')
-    
-    parser.add_argument('-r', '--result', type = str, nargs = 1,
-                        metavar = 'directory', default = None,
-                        help = "The directory to save to")
-    
-    parser.add_argument('-v', '--viz', action = 'store_true',
-                        help = 'Open a 3D window to see the result')
-    
-    # parse the arguments from standard input
-    args = parser.parse_args()
-    
-    return args
-#----------------------------------------------------------------
-if __name__ == '__main__':
-    args = parse_args()
-    voxel_path = args.voxel[0]
-    grid_path = args.grid[0]
-    res_path = args.result[0]
-    viz = args.viz
-    
-    # voxel_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\voxel\\projected_voxels0.json'
-    # grid_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\grid\\grid0.json'
-    # res_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\mrt.csv'
-    # viz = True
+def calc_mrt(voxel_path, grid_path, res_path, viz):
     #----------------------------------------------------------------
     #read the voxel & convert the voxels to bboxs
     #----------------------------------------------------------------
-    t1_start = perf_counter()
     bbx_ls = utils.vox2bbox(voxel_path)
     #read grid file 
     grid_verts, grid_faces = read_grid_json(grid_path)
@@ -126,14 +88,11 @@ if __name__ == '__main__':
     ttl = len(rays)*nvx
     nparallel = int(ttl/aloop)
     if nparallel != 0:
-        print('number of splits:', nparallel)
+        # print('number of splits:', nparallel)
         rays_ls = utils.separate_rays(rays, nparallel)
     else:
         rays_ls = [rays]
-        
-    t1_stop = perf_counter()
-    counter = t1_stop - t1_stop
-    print('Time taken 2 Generate Rays(mins)', round(counter/60, 1))
+    
     #------------------------------------------------------------------
     # calculate the mrt at each spot
     #------------------------------------------------------------------
@@ -151,10 +110,6 @@ if __name__ == '__main__':
     results = pool.starmap(geomie3d.calculate.rays_bboxes_intersect, 
                            [(ray, bbx_ls) for ray in rays_ls])
     pool.close()
-    
-    t2_stop = perf_counter()
-    counter = t2_stop - t1_stop
-    print('Time taken 2 Intersect(mins)', round(counter/60, 1))
     #------------------------------------------------------------------
     # process the intersection results
     #------------------------------------------------------------------
@@ -176,30 +131,29 @@ if __name__ == '__main__':
             avg = sum(gt)/len(gt)
             mrt_ls.append(avg)
         else:
-            mrt_ls.append(-999)
+            mrt_ls.append(-1)
     
-    header = ['ply\n', 'format ascii 1.0\n', 'comment date DD/MM/YYY\n', 
-              'comment time HH:MM:SS\n', 'comment sensorID xxxxxxxx\n', 
-              'comment sensorType scanningSMART / fixedSMART\n', 
-              'element vertex 6144\n', 'property float32 x\n', 
-              'property float32 y\n', 'property float32 z\n', 
-              'property float32 temperature\n', 'end_header\n']
+    # header = ['ply\n', 'format ascii 1.0\n', 'comment date DD/MM/YYY\n', 
+    #           'comment time HH:MM:SS\n', 'comment sensorID xxxxxxxx\n', 
+    #           'comment sensorType scanningSMART / fixedSMART\n', 
+    #           'element vertex 6144\n', 'property float32 x\n', 
+    #           'property float32 y\n', 'property float32 z\n', 
+    #           'property float32 temperature\n', 'end_header\n']
+    
+    # utils.write2ply(res_path, grid_xyzs, mrt_ls, header)
     
     grid_xyzs = [v.point.xyz for v in grid_verts]
-    # utils.write2ply(res_path, grid_xyzs, mrt_ls, header)
     rows = [['posx', 'posy', 'posz', 'mrt']]
     for gcnt,grid_xyz in enumerate(grid_xyzs):
         mrt = mrt_ls[gcnt]
         row = [str(grid_xyz[0]), str(grid_xyz[1]), str(grid_xyz[2]), str(round(mrt,2))]
         rows.append(row)
     utils.write2csv(rows, res_path)
-    t3_stop = perf_counter()
-    counter = t3_stop - t2_stop
-    print('Time taken 2 Process(mins)', round(counter/60, 1))
     #----------------------------------------------------------------
     #for viz
     #----------------------------------------------------------------
     if viz == True:
+        print('Visualizing ... ...')
         viz_dlist = []
         temp_viz = []
         vx_viz = []
@@ -231,3 +185,11 @@ if __name__ == '__main__':
         # viz_dlist.append({'topo_list':e_ls, 'colour': [1,1,1,0.3]})
         viz_dlist.append({'topo_list':grid_verts, 'colour': 'white'})
         geomie3d.utility.viz_falsecolour(grid_faces, mrt_ls, other_topo_dlist = viz_dlist)
+
+#----------------------------------------------------------------
+if __name__ == '__main__':
+    voxel_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\voxel\\projected_voxels0.json'
+    grid_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\grid\\grid0.json'
+    res_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\mrt.csv'
+    viz = True
+    calc_mrt(voxel_path, grid_path, res_path, viz)

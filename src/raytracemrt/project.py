@@ -1,13 +1,10 @@
-import sys
-import argparse
-from time import perf_counter
 import multiprocessing as mp
 
-#add the path to geomie3d
-sys.path.append('F:\\kianwee_work\\spyder_workspace\\geomie3d')
 import geomie3d
 import numpy as np
-import utils
+
+import raytracemrt.utils as utils
+# import utils
 #----------------------------------------------------------------
 def process_intersection(intersection_results, ijk_ls, unq_bbx_ls):
     hrs = intersection_results[0]
@@ -94,65 +91,13 @@ def find_msbbx(all_bbxs, hit_bbxs):
     ms_bbxs = np.take(all_bbxs, ms_idx_ls, axis=0).tolist()
     return ms_bbxs  
 
-def parse_args():
-    # create parser object
-    parser = argparse.ArgumentParser(description = "Project your Chaosense Data")
- 
-    # defining arguments for parser object
-    parser.add_argument('-s', '--scan', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The ply file to process')
-     
-    parser.add_argument('-p', '--points', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The path of the .pts point cloud file')
-    
-    parser.add_argument('-x', '--xyz', type = float, nargs = 3,
-                        metavar = ('posX', 'posY', 'posZ'), default = None,
-                        help = "The position of the sensor")
-    
-    parser.add_argument('-r', '--result', type = str, nargs = 1,
-                        metavar = 'directory', default = None,
-                        help = "The directory to save to")
-    
-    parser.add_argument('-f', '--voxel_path', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The path to save to after the processing')
-    
-    parser.add_argument('-z', '--voxel_size', type = float, nargs = 1,
-                        metavar = 'voxel size', default = None,
-                        help = "The size of the voxel")
-    
-    parser.add_argument('-v', '--viz', action = 'store_true',
-                        help = 'Open a 3D window to see the result')
-    
-    # parse the arguments from standard input
-    args = parser.parse_args()
-    
-    return args
-#----------------------------------------------------------------
-if __name__ == '__main__':
-    args = parse_args()
-    therm_scan_path = args.scan[0]
-    pts_path = args.points[0]
-    sensor_pos = args.xyz
-    res_path = args.result[0]
-    vx_path = args.voxel_path[0]
-    v_size = args.voxel_size[0]
-    viz = args.viz
-    
-    # therm_scan_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm.ply'
-    # pts_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\pts\\example1.pts'
-    # sensor_pos = [0.5, 0.8, 1.5]#[1,0,1]
-    # res_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\intersections.ply'
-    # vx_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\projected_voxels0.json'
-    # v_size = 0.3
-    # viz = True
+def project(therm_scan_path, pts_path, sensor_pos, res_path, vx_path, v_size, viz):
     #----------------------------------------------------------------
     #process the geometry point clouds
     #read the pts file and voxelise the pts
     #----------------------------------------------------------------
-    t1_start = perf_counter()
+    # from time import perf_counter
+    # t1_start = perf_counter()
     viz_dlist = []
     with open(pts_path) as f:
         lines = f.readlines()
@@ -186,9 +131,9 @@ if __name__ == '__main__':
         
     # viz_dlist.append({'topo_list':vx_ls, 'colour':[0,0,1,0.3], 'px_mode': False, 'point_size':v_size})
     # geomie3d.utility.viz(viz_dlist)
-    t1_stop = perf_counter()
-    counter = t1_stop - t1_start
-    print('Time taken 2 Voxelize(mins)', round(counter/60, 1))
+    # t1_stop = perf_counter()
+    # counter = t1_stop - t1_start
+    # print('Time taken 2 Voxelize(mins)', round(counter/60, 1))
     #----------------------------------------------------------------
     # read the thermal scan
     #----------------------------------------------------------------
@@ -214,7 +159,7 @@ if __name__ == '__main__':
             rays_ls = utils.separate_rays(rays, nparallel)
         else:
             rays_ls = [rays]
-        print('number of splits:', nparallel)
+        # print('number of splits:', nparallel)
     #------------------------------------------------------------------
     # project the thermal scan onto the geometry point clouds
     #------------------------------------------------------------------
@@ -233,9 +178,9 @@ if __name__ == '__main__':
                            [(ray, bbx_ls) for ray in rays_ls])
     pool.close()
     
-    t2_stop = perf_counter()
-    counter = t2_stop - t1_stop
-    print('Time taken 2 Project(mins)', round(counter/60, 1))
+    # t2_stop = perf_counter()
+    # counter = t2_stop - t1_stop
+    # print('Time taken 2 Project(mins)', round(counter/60, 1))
     #------------------------------------------------------------------
     #process the results
     #------------------------------------------------------------------
@@ -260,9 +205,9 @@ if __name__ == '__main__':
         processed_bbx_ls = bbx_ls
     
     utils.write_bbox2json(processed_bbx_ls, vx_path)
-    t3_stop = perf_counter()
-    counter = t3_stop - t2_stop
-    print('Time taken 2 Process(mins)', round(counter/60, 1))
+    # t3_stop = perf_counter()
+    # counter = t3_stop - t2_stop
+    # print('Time taken 2 Process(mins)', round(counter/60, 1))
     #------------------------------------------------------------------
     #viz the results
     #------------------------------------------------------------------
@@ -308,4 +253,13 @@ if __name__ == '__main__':
         # geomie3d.utility.viz(viz_dlist)
         geomie3d.utility.viz_falsecolour(intvs, temp_ls, 
                                           other_topo_dlist=viz_dlist)
-        
+#----------------------------------------------------------------
+if __name__ == '__main__':
+    therm_scan_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm.ply'
+    pts_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\pts\\example1.pts'
+    sensor_pos = [0.5, 0.8, 1.5]#[1,0,1]
+    res_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\intersect\\intersections.ply'
+    vx_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\voxel\\projected_voxels0.json'
+    v_size = 0.3
+    viz = True
+    project(therm_scan_path, pts_path, sensor_pos, res_path, vx_path, v_size, viz)

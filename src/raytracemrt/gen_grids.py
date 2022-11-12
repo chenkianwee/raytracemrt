@@ -1,12 +1,11 @@
 import os
-import sys
 import json
-import argparse
 #add the path to geomie3d
-sys.path.append('F:\\kianwee_work\\spyder_workspace\\geomie3d')
 import geomie3d
 import numpy as np
-import utils
+
+import raytracemrt.utils as utils
+# import utils
 #----------------------------------------------------------------
 def aly_grid_frm_bbx(bbx, xdim, ydim, height, buffer):
     minx = bbx.minx + buffer
@@ -31,48 +30,7 @@ def aly_grid_frm_bbx(bbx, xdim, ydim, height, buffer):
     
     return grid_xyzs, realx, realy, grid_faces
 
-def parse_args():
-    # create parser object
-    parser = argparse.ArgumentParser(description = "Generate Grid Points for MRT Calculation")
- 
-    # defining arguments for parser object
-    parser.add_argument('-e', '--voxel', type = str, nargs = 1,
-                        metavar = 'filepath', default = None,
-                        help = 'The voxel file used for environment')
-    
-    parser.add_argument('-r', '--result', type = str, nargs = 1,
-                        metavar = 'directory', default = None,
-                        help = "The directory to save to")
-    
-    parser.add_argument('-g', '--grid', type = float, nargs = 4,
-                        metavar = ('Length(m)','Width(m)','Height(m)', 'Buffer(m)'), 
-                        help = 'Defining the grid with these dimensions')
-    
-    parser.add_argument('-a', '--afile', type = int, nargs = 1,
-                        metavar = 'Points in a file', default = [10000],
-                        help = 'Specify the number of points in a file')
-    
-    parser.add_argument('-v', '--viz', action = 'store_true',
-                        help = 'Open a 3D window to see the result')
-    
-    # parse the arguments from standard input
-    args = parser.parse_args()
-    return args
-#----------------------------------------------------------------
-if __name__ == '__main__':
-    args = parse_args()
-    voxel_path = args.voxel[0]
-    res_dir = args.result[0]
-    grid_dim = args.grid
-    pts_afile = args.afile[0]
-    viz = args.viz
-    
-    # voxel_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\voxel\\projected_voxels0.json'
-    # res_dir = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\grid'
-    # grid_dim = [0.5, 0.5, 1, 0.5]
-    # pts_afile = 10000
-    # viz = True
-    
+def gen_grids(voxel_path, res_dir, grid_dim, pts_afile, viz):
     bbx_ls = utils.vox2bbox(voxel_path)
     overall_bbx = geomie3d.calculate.bbox_frm_bboxes(bbx_ls)
     # create mrt grid from the overall bbx
@@ -94,8 +52,8 @@ if __name__ == '__main__':
         up_ray_ls.append(up)
         dn_ray_ls.append(dn)
         
-    upres = geomie3d.calculate.rays_bboxes_intersect(up_ray_ls, bbx_ls)
-    dnres = geomie3d.calculate.rays_bboxes_intersect(dn_ray_ls, bbx_ls)
+    geomie3d.calculate.rays_bboxes_intersect(up_ray_ls, bbx_ls)
+    geomie3d.calculate.rays_bboxes_intersect(dn_ray_ls, bbx_ls)
     
     in_space = []
     for cnt, ur in enumerate(up_ray_ls):
@@ -112,13 +70,13 @@ if __name__ == '__main__':
     
     grid_idx = np.where(in_space)[0]
     chosen_grid_xyz = np.take(grid_xyzs, grid_idx, axis=0).tolist()
-    chosen_faces = np.take(grid_faces, grid_idx, axis=0).tolist()
     afile = pts_afile
     npts = len(chosen_grid_xyz)
+    
+    res_paths = []
     if npts > afile:
         #split the file
         nsplits = int(npts/afile)
-        vs_ls = []
         interval = npts/nsplits
         for i in range(nsplits):
             start = int(interval*i)
@@ -129,7 +87,7 @@ if __name__ == '__main__':
                        'height': height}
             with open(res_path, "w") as outfile:
                 json.dump(grid_dt, outfile)
-            print(res_path)
+            res_paths.append(res_path)
     else:
         res_path = os.path.join(res_dir, 'grid0.json')
         grid_dt = {'grid_points': chosen_grid_xyz,
@@ -137,13 +95,13 @@ if __name__ == '__main__':
                    'height': height}
         with open(res_path, "w") as outfile:
             json.dump(grid_dt, outfile)
-        print(res_path)
+        res_paths.append(res_path)
     #--------------------------------------------------------------------
     #visualize
     #--------------------------------------------------------------------
     if viz == True:
         viz_dlist = []
-        # print('Visualizing ...')
+        print('Visualizing ...')
         vs = geomie3d.create.vertex_list(chosen_grid_xyz)
         fs = []
         for xyz in chosen_grid_xyz:
@@ -170,3 +128,13 @@ if __name__ == '__main__':
             
         viz_dlist.append({'topo_list': viz_ls, 'colour': [0,0,1,0.2], 'px_mode': False, 'point_size': v_size})
         geomie3d.utility.viz(viz_dlist)
+    return res_paths
+#----------------------------------------------------------------
+if __name__ == '__main__':
+    voxel_path = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\voxel\\projected_voxels0.json'
+    res_dir = 'F:\\kianwee_work\\princeton\\2022_06_to_2022_12\\chaosense\\example1\\ply\\example1_therm_result\\grid'
+    grid_dim = [0.5, 0.5, 1, 0.5]
+    pts_afile = 10000
+    viz = True
+    grid_paths = gen_grids(voxel_path, res_dir, grid_dim, pts_afile, viz)
+    print(grid_paths)
